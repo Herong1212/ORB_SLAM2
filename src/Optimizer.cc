@@ -1063,7 +1063,7 @@ namespace ORB_SLAM2
 
         // 创建稀疏求解器
         g2o::SparseOptimizer optimizer; // 创建稀疏求解器
-        optimizer.setVerbose(false); // 关闭调试输出
+        optimizer.setVerbose(false);    // 关闭调试输出
 
         // 创建线性求解器（linearSolver）
         g2o::BlockSolver_7_3::LinearSolverType *linearSolver =
@@ -1110,6 +1110,7 @@ namespace ORB_SLAM2
             const int nIDi = pKF->mnId;
 
             LoopClosing::KeyFrameAndPose::const_iterator it = CorrectedSim3.find(pKF);
+            
             if (it != CorrectedSim3.end())
             {
                 // 如果该关键帧在闭环时通过Sim3传播调整过，优先用调整后的Sim3位姿

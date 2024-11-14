@@ -199,15 +199,15 @@ namespace ORB_SLAM2
         float mnCovisibilityConsistencyTh;
 
         // Loop detector variables
-        
-        KeyFrame *mpCurrentKF;  // todo 当前关键帧，其实称之为【当前正在处理的关键帧】更加合适
+
+        KeyFrame *mpCurrentKF; // todo 当前关键帧，其实称之为【当前正在处理的关键帧】更加合适
         // 最终检测出来的,和当前关键帧形成闭环的闭环关键帧
         KeyFrame *mpMatchedKF;
         /// 上一次执行的时候产生的连续组s
         std::vector<ConsistentGroup> mvConsistentGroups;
         /// 从上面的关键帧中进行筛选之后得到的具有足够的"连续性"的关键帧 -- 这个其实也是相当于更高层级的、更加优质的闭环候选帧
         std::vector<KeyFrame *> mvpEnoughConsistentCandidates;
-        
+
         std::vector<KeyFrame *> mvpCurrentConnectedKFs; // todo [当前关键帧组]，和当前关键帧相连的关键帧形成的
         /// 下面的变量中存储的地图点在"当前关键帧"中成功地找到了匹配点的地图点的集合
         std::vector<MapPoint *> mvpCurrentMatchedPoints;
@@ -238,7 +238,8 @@ namespace ORB_SLAM2
         bool mbFixScale;
 
         /// 已经进行了的全局BA次数(包含中途被打断的)
-        bool mnFullBAIdx;
+        // bool mnFullBAIdx;
+        int mnFullBAIdx;
     };
 
 } // namespace ORB_SLAM
