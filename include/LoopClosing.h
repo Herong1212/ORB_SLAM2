@@ -58,7 +58,7 @@ namespace ORB_SLAM2
         /// 自定义数据类型, ConsistentGroup.first --- 每个“连续组”中的关键帧，ConsistentGroup.second --- 每个“连续组”的序号
         typedef pair<set<KeyFrame *>, int> ConsistentGroup;
 
-        /// 存储关键帧对象和位姿的键值对,这里是 map 的完整构造函数
+        /// 存储关键帧对象和位姿的键值对，这里是 map 的完整构造函数
         typedef map<KeyFrame *,                                                      // 键
                     g2o::Sim3,                                                       // 值
                     std::less<KeyFrame *>,                                           // 排序算法
@@ -124,18 +124,16 @@ namespace ORB_SLAM2
             return mbFinishedGBA;
         }
 
-        /** @brief 由外部线程调用,请求终止当前线程 */
+        // 由外部线程调用，请求终止当前线程
         void RequestFinish();
 
-        /** @brief 由外部线程调用,判断当前回环检测线程是否已经正确终止了  */
+        // 由外部线程调用，判断当前回环检测线程是否已经正确终止了
         bool isFinished();
 
         EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
     protected:
-        /** @brief 查看列表中是否有等待被插入的关键帧
-         *  @return true 如果有
-         *  @return false 没有  */
+        // 查看列表中是否有等待被插入的关键帧
         bool CheckNewKeyFrames();
 
         /** @brief 检测回环,如果有的话就返回真 */
@@ -179,14 +177,10 @@ namespace ORB_SLAM2
         /// 和复位当前线程相关的互斥量
         std::mutex mMutexReset;
 
-        /**
-         * @brief 当前线程调用，查看是否有外部线程请求当前线程
-         */
+        /// 当前线程调用，查看是否有外部线程请求当前线程
         bool CheckFinish();
 
-        /**
-         * @brief 有当前线程调用，执行完成该函数之后线程主函数退出，线程销毁
-         */
+        // 有当前线程调用，执行完成该函数之后线程主函数退出，线程销毁
         void SetFinish();
 
         /// 是否有终止当前线程的请求
@@ -232,17 +226,18 @@ namespace ORB_SLAM2
         /// 上一次执行的时候产生的连续组 s
         std::vector<ConsistentGroup> mvConsistentGroups;
 
-        /// 从上面的关键帧中进行筛选之后得到的具有足够的"连续性"的关键帧 -- 这个其实也是相当于更高层级的、更加优质的闭环候选帧
+        // ps： 从上面的关键帧中进行筛选之后，得到的达到连续性条件的关键帧 -- 这个其实也是相当于更高层级的、更加优质的闭环候选帧
         std::vector<KeyFrame *> mvpEnoughConsistentCandidates;
 
-        std::vector<KeyFrame *> mvpCurrentConnectedKFs; // todo [当前关键帧组]，和当前关键帧相连的关键帧形成的
+        // 当前关键帧组，和当前关键帧相连的关键帧形成的
+        std::vector<KeyFrame *> mvpCurrentConnectedKFs;
         /// 下面的变量中存储的地图点在"当前关键帧"中成功地找到了匹配点的地图点的集合
         std::vector<MapPoint *> mvpCurrentMatchedPoints;
         /// 闭环关键帧上的所有相连关键帧的地图点
         std::vector<MapPoint *> mvpLoopMapPoints;
-        // 下面的变量的cv::Mat格式版本
+        // 下面的变量的 cv::Mat 格式版本
         cv::Mat mScw;
-        // 当得到了当前关键帧的闭环关键帧以后,计算出来的从世界坐标系到当前帧的sim3变换
+        // 当得到了当前关键帧的闭环关键帧以后，计算出来的从世界坐标系到当前帧的sim3变换
         g2o::Sim3 mg2oScw;
 
         /// 上一次闭环帧的 id
@@ -251,7 +246,7 @@ namespace ORB_SLAM2
         // Variables related to Global Bundle Adjustment
         /// 全局BA线程是否在进行
         bool mbRunningGBA;
-        /// 全局BA线程在收到停止请求之后是否停止的比标志 // ? 可是直接使用上面变量的逆不就可以表示了吗? // ? 表示全局BA工作是否正常结束?
+        /// 全局BA线程在收到停止请求之后是否停止的标志 // ? 可是直接使用上面变量的逆不就可以表示了吗? // ? 表示全局BA工作是否正常结束?
         bool mbFinishedGBA;
         /// 由当前线程调用,请求停止当前正在进行的全局BA
         bool mbStopGBA;
@@ -261,8 +256,8 @@ namespace ORB_SLAM2
         std::thread *mpThreadGBA;
 
         // Fix scale in the stereo/RGB-D case
-        /// 如果是在双目或者是RGBD输入的情况下，就要固定尺度，这个变量就是是否要固定尺度的标志
-        /// ps：用于标记是否保持闭环检测的尺度不变，通常在单目系统中设置为false，而在双目或RGB-D系统中设置为true。
+        // 如果是在双目或者是RGBD输入的情况下，就要固定尺度，这个变量就是是否要固定尺度的标志
+        // ps：用于标记是否保持闭环检测的尺度不变，通常在单目系统中设置为false，而在双目或RGB-D系统中设置为true。
         bool mbFixScale;
 
         /// 已经进行了的全局BA次数(包含中途被打断的)
