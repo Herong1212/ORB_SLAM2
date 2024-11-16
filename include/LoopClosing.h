@@ -55,7 +55,7 @@ namespace ORB_SLAM2
     class LoopClosing
     {
     public:
-        /// 自定义数据类型, ConsistentGroup.first 对应每个“连续组”中的关键帧，ConsistentGroup.second 为每个“连续组”的序号
+        /// 自定义数据类型, ConsistentGroup.first --- 每个“连续组”中的关键帧，ConsistentGroup.second --- 每个“连续组”的序号
         typedef pair<set<KeyFrame *>, int> ConsistentGroup;
 
         /// 存储关键帧对象和位姿的键值对,这里是 map 的完整构造函数
@@ -76,19 +76,30 @@ namespace ORB_SLAM2
          * 3中的s需要被计算
          */
         LoopClosing(Map *pMap, KeyFrameDatabase *pDB, ORBVocabulary *pVoc, const bool bFixScale);
-        /** @brief 设置追踪线程的句柄
-         *  @param[in] pTracker 追踪线程的句柄  */
+
+        /**
+         * @brief 设置追踪线程的句柄
+         *
+         * @param[in] pTracker 追踪线程的句柄
+         */
         void SetTracker(Tracking *pTracker);
-        /** @brief 设置局部建图线程的句柄
-         * @param[in] pLocalMapper   */
+
+        /**
+         * @brief 设置局部建图线程的句柄
+         *
+         * @param[in] pLocalMapper
+         */
         void SetLocalMapper(LocalMapping *pLocalMapper);
 
-        // NOTE Main function
+        // note：Main function！
         /** @brief 回环检测线程主函数 */
         void Run();
 
-        /** @brief 将某个关键帧加入到回环检测的过程中,由局部建图线程调用
-         *  @param[in] pKF   */
+        /**
+         * @brief 将某个关键帧加入到回环检测的过程中，由局部建图线程调用
+         *
+         * @param[in] pKF
+         */
         void InsertKeyFrame(KeyFrame *pKF);
 
         /** @brief 由外部线程调用,请求复位当前线程.在回环检测复位完成之前,该函数将一直保持堵塞状态 */
@@ -96,8 +107,8 @@ namespace ORB_SLAM2
 
         // This function will run in a separate thread
         /**
-         * @brief 全局 BA 线程,这个函数是这个线程的主函数
-         * @param[in] nLoopKF 看名字是闭环关键帧,但是实际上给的是【当前关键帧】的 ID
+         * @brief 全局 BA 线程，这个函数是这个线程的主函数
+         * @param[in] nLoopKF 看名字是闭环关键帧，但是实际上给的是【当前关键帧】的 ID
          */
         void RunGlobalBundleAdjustment(unsigned long nLoopKF);
 
@@ -158,31 +169,44 @@ namespace ORB_SLAM2
          * 5. 创建线程进行全局Bundle Adjustment
          */
         void CorrectLoop();
+
         /** @brief  当前线程调用,检查是否有外部线程请求复位当前线程,如果有的话就复位回环检测线程 */
         void ResetIfRequested();
+
         /// 是否有复位当前线程的请求
         bool mbResetRequested;
+
         /// 和复位当前线程相关的互斥量
         std::mutex mMutexReset;
 
-        /** @brief 当前线程调用,查看是否有外部线程请求当前线程  */
+        /**
+         * @brief 当前线程调用，查看是否有外部线程请求当前线程
+         */
         bool CheckFinish();
-        /** @brief 有当前线程调用,执行完成该函数之后线程主函数退出,线程销毁 */
+
+        /**
+         * @brief 有当前线程调用，执行完成该函数之后线程主函数退出，线程销毁
+         */
         void SetFinish();
+
         /// 是否有终止当前线程的请求
         bool mbFinishRequested;
+
         /// 当前线程是否已经停止工作
         bool mbFinished;
+
         /// 和当前线程终止状态操作有关的互斥量
         std::mutex mMutexFinish;
 
         /// (全局)地图的指针
         Map *mpMap;
+
         /// 追踪线程句柄
         Tracking *mpTracker;
 
         /// 关键帧数据库
         KeyFrameDatabase *mpKeyFrameDB;
+
         /// 词袋模型中的大字典
         ORBVocabulary *mpORBVocabulary;
         /// 局部建图线程句柄
@@ -201,10 +225,13 @@ namespace ORB_SLAM2
         // Loop detector variables
 
         KeyFrame *mpCurrentKF; // todo 当前关键帧，其实称之为【当前正在处理的关键帧】更加合适
-        // 最终检测出来的,和当前关键帧形成闭环的闭环关键帧
+
+        // ps：最终检测出来的，和当前关键帧形成闭环的闭环关键帧
         KeyFrame *mpMatchedKF;
-        /// 上一次执行的时候产生的连续组s
+
+        /// 上一次执行的时候产生的连续组 s
         std::vector<ConsistentGroup> mvConsistentGroups;
+
         /// 从上面的关键帧中进行筛选之后得到的具有足够的"连续性"的关键帧 -- 这个其实也是相当于更高层级的、更加优质的闭环候选帧
         std::vector<KeyFrame *> mvpEnoughConsistentCandidates;
 
@@ -224,7 +251,7 @@ namespace ORB_SLAM2
         // Variables related to Global Bundle Adjustment
         /// 全局BA线程是否在进行
         bool mbRunningGBA;
-        /// 全局BA线程在收到停止请求之后是否停止的比标志 //? 可是直接使用上面变量的逆不就可以表示了吗? //? 表示全局BA工作是否正常结束?
+        /// 全局BA线程在收到停止请求之后是否停止的比标志 // ? 可是直接使用上面变量的逆不就可以表示了吗? // ? 表示全局BA工作是否正常结束?
         bool mbFinishedGBA;
         /// 由当前线程调用,请求停止当前正在进行的全局BA
         bool mbStopGBA;
@@ -234,7 +261,8 @@ namespace ORB_SLAM2
         std::thread *mpThreadGBA;
 
         // Fix scale in the stereo/RGB-D case
-        /// 如果是在双目或者是RGBD输入的情况下,就要固定尺度,这个变量就是是否要固定尺度的标志
+        /// 如果是在双目或者是RGBD输入的情况下，就要固定尺度，这个变量就是是否要固定尺度的标志
+        /// ps：用于标记是否保持闭环检测的尺度不变，通常在单目系统中设置为false，而在双目或RGB-D系统中设置为true。
         bool mbFixScale;
 
         /// 已经进行了的全局BA次数(包含中途被打断的)

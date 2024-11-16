@@ -124,7 +124,7 @@ namespace ORB_SLAM2
                 }
 
                 // Step 8 将当前帧加入到闭环检测队列中
-                // 注意这里的关键帧被设置成为了 bad 的情况, 这个需要注意
+                // ! 注意这里的关键帧被设置成为了 bad 的情况, 这个需要注意
                 mpLoopCloser->InsertKeyFrame(mpCurrentKeyFrame);
             }
             else if (Stop()) // 当要终止当前线程的时候
@@ -253,7 +253,7 @@ namespace ORB_SLAM2
         if (mbMonocular)
             nThObs = 2; // 单目相机 —— 2
         else
-            nThObs = 3; // 双目或 RGB-D 相机 —— 3
+            nThObs = 3;             // 双目或 RGB-D 相机 —— 3
         const int cnThObs = nThObs; // ? 这句不明白
 
         // Step 2：遍历检查新添加的地图点

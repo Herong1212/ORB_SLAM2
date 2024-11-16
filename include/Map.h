@@ -41,14 +41,13 @@ namespace ORB_SLAM2
     // new1
     class SystemSetting;
 
-    /**
-     * @brief 地图
-     *
-     */
     class Map
     {
     public:
-        /** @brief 构造函数 */
+        /**
+         * @brief 构造函数
+         *
+         */
         Map();
 
         /**
@@ -57,22 +56,26 @@ namespace ORB_SLAM2
          * @param[in] pKF 关键帧
          */
         void AddKeyFrame(KeyFrame *pKF);
+
         /**
          * @brief 向地图中添加地图点
          *
          * @param[in] pMP 地图点
          */
         void AddMapPoint(MapPoint *pMP);
+
         /**
          * @brief 从地图中擦除地图点
          *
          * @param[in] pMP 地图点
          */
         void EraseMapPoint(MapPoint *pMP);
+
         /**
          * @brief 从地图中删除关键帧
-         * @detials 实际上这个函数中目前仅仅是删除了在std::set中保存的地图点的指针,并且删除后
-         * 之前的地图点所占用的内存其实并没有得到释放
+         *
+         * @detials 实际上这个函数中目前仅仅是删除了在 std::set 中保存的地图点的指针，并且删除后之前的地图点所占用的内存其实并没有得到释放
+         *
          * @param[in] pKF 关键帧
          */
         void EraseKeyFrame(KeyFrame *pKF);
@@ -135,7 +138,9 @@ namespace ORB_SLAM2
          */
         long unsigned int GetMaxKFid();
 
-        /** @brief 清空地图 */
+        /**
+         * @brief 清空地图
+         */
         void clear();
 
         // 保存了最初始的关键帧
@@ -145,7 +150,7 @@ namespace ORB_SLAM2
         std::mutex mMutexMapUpdate;
 
         // This avoid that two points are created simultaneously in separate threads (id conflict)
-        /// 为了避免地图点id冲突设计的互斥量
+        /// 为了避免地图点id冲突，设计的互斥量
         std::mutex mMutexPointCreation;
 
         // new0 保存地图信息函数
@@ -157,9 +162,9 @@ namespace ORB_SLAM2
 
         // new1
         void Load(const string &filename, SystemSetting *mySystemSetting);
-        
+
         MapPoint *LoadMapPoint(ifstream &f);
-        KeyFrame *LoadKeyFrame(ifstream &f, SystemSetting *mySystemSetting); 
+        KeyFrame *LoadKeyFrame(ifstream &f, SystemSetting *mySystemSetting);
 
     protected:
         // 存储所有的地图点
@@ -184,9 +189,6 @@ namespace ORB_SLAM2
         // new0 保存地图点和关键帧
         void SaveMapPoint(ofstream &f, MapPoint *mp);
         void SaveKeyFrame(ofstream &f, KeyFrame *kf);
-
-        
-
     };
 
 } // namespace ORB_SLAM

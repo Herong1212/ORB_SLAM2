@@ -332,10 +332,13 @@ namespace ORB_SLAM2
         int mnLoopWords;
         /// 和那个形成回环的关键帧的词袋匹配程度的评分
         float mLoopScore;
-        // 用来存储在辅助进行重定位的时候，要进行重定位的那个帧的id
+
+        // ps：用来存储在辅助进行重定位的时候，要进行重定位的那个帧的 id
         long unsigned int mnRelocQuery;
-        /// 和那个要进行重定位的帧,所具有相同的单词的个数
+
+        // 和那个要进行重定位的帧，所具有相同的单词的个数
         int mnRelocWords;
+        
         /// 还有和那个帧的词袋的相似程度的评分
         float mRelocScore;
 
@@ -417,6 +420,7 @@ namespace ORB_SLAM2
         // 与该关键帧连接（至少15个共视地图点）的关键帧与权重
         // Covisibility Graph
         std::map<KeyFrame *, int> mConnectedKeyFrameWeights;
+        
         // 共视关键帧中权重从大到小排序后的关键帧
         std::vector<KeyFrame *> mvpOrderedConnectedKeyFrames;
         // 共视关键帧中从大到小排序后的权重，和上面对应

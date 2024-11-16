@@ -50,7 +50,7 @@ namespace ORB_SLAM2
                                                                                                             mpKeyFrameDB(pDB), mpORBVocabulary(pVoc), mpMatchedKF(NULL), mLastLoopKFid(0), mbRunningGBA(false), mbFinishedGBA(true),
                                                                                                             mbStopGBA(false), mpThreadGBA(NULL), mbFixScale(bFixScale), mnFullBAIdx(0)
     {
-        // 连续性阈值
+        // 连续性阈值（表示“连续组”的一致性阈值），阈值越高，检测的鲁棒性越强。
         mnCovisibilityConsistencyTh = 3;
     }
 
@@ -65,23 +65,23 @@ namespace ORB_SLAM2
         mpLocalMapper = pLocalMapper;
     }
 
-    // NOTE 回环线程主函数
-    // PS：线程主函数，大 Boss， 非常重要的！！！
+    // note：回环线程主函数：实现主循环，持续检测闭环，并在检测到闭环时执行优化。
     void LoopClosing::Run()
     {
+        // 表示闭环检测线程正在运行
+        // 当线程结束时，会将 mbFinished 设置为 true。
         mbFinished = false;
 
         // 线程主循环
         while (1)
         {
-            // Check if there are keyframes in the queue
+            // Step 1 查看闭环检测队列 mlpLoopKeyFrameQueue 中有没有关键帧进来
             // Loopclosing 中的关键帧是 LocalMapping 发送过来的，LocalMapping 是 Tracking 中发过来的
             // 在 LocalMapping 中通过 InsertKeyFrame 将关键帧插入闭环检测队列 mlpLoopKeyFrameQueue
-            // Step 1 查看闭环检测队列 mlpLoopKeyFrameQueue 中有没有关键帧进来
             if (CheckNewKeyFrames())
             {
                 // Detect loop candidates and check covisibility consistency
-                if (DetectLoop())
+                if (DetectLoop()) // 闭环检测的核心功能
                 {
                     // Compute similarity transformation [sR|t]
                     // In the stereo/RGBD case s=1
@@ -96,7 +96,7 @@ namespace ORB_SLAM2
             // 查看是否有外部线程请求复位当前线程
             ResetIfRequested();
 
-            // 查看外部线程是否有终止当前线程的请求,如果有的话就跳出这个线程的主函数的主循环
+            // 查看外部线程是否有终止当前线程的请求，如果有的话就跳出这个线程的主函数的主循环
             if (CheckFinish())
                 break;
 
@@ -104,35 +104,30 @@ namespace ORB_SLAM2
             std::this_thread::sleep_for(std::chrono::milliseconds(5));
         }
 
-        // 运行到这里说明有外部线程请求终止当前线程,在这个函数中执行终止当前线程的一些操作
+        // 运行到这里说明有外部线程请求终止当前线程，在这个函数中执行终止当前线程的一些操作
         SetFinish();
     }
 
-    // 将某个关键帧加入到回环检测的过程中,由局部建图线程调用
+    // 将某个关键帧加入到回环检测的过程中，由局部建图线程调用
     void LoopClosing::InsertKeyFrame(KeyFrame *pKF)
     {
         unique_lock<mutex> lock(mMutexLoopQueue);
-        // 注意：这里第0个关键帧不能够参与到回环检测的过程中,因为第0关键帧定义了整个地图的世界坐标系
+        // ! 这里第0个关键帧不能够参与到回环检测的过程中，因为第0关键帧定义了整个地图的世界坐标系
         if (pKF->mnId != 0)
             mlpLoopKeyFrameQueue.push_back(pKF);
     }
 
-    /*
+    /**
      * 查看列表中是否有等待被插入的关键帧
      * @return 如果存在，返回true
      */
     bool LoopClosing::CheckNewKeyFrames()
     {
         unique_lock<mutex> lock(mMutexLoopQueue);
+
         return (!mlpLoopKeyFrameQueue.empty());
     }
 
-    /**
-     * @brief 闭环检测
-     *
-     * @return true             成功检测到闭环
-     * @return false            未检测到闭环
-     */
     // TODO 作用：闭环线程的第 1 阶段 ——> 闭环检测
     bool LoopClosing::DetectLoop()
     {
@@ -144,7 +139,7 @@ namespace ORB_SLAM2
             mpCurrentKF = mlpLoopKeyFrameQueue.front();
             // 取出关键帧后从队列里弹出该关键帧
             mlpLoopKeyFrameQueue.pop_front();
-            // 设置当前关键帧不要在优化的过程中被删除
+            // 设置当前关键帧不要在优化的过程中被删除 
             mpCurrentKF->SetNotErase();
         }
 
@@ -157,34 +152,34 @@ namespace ORB_SLAM2
             return false;
         }
 
-        // Compute reference BoW similarity score
-        // This is the lowest score to a connected keyframe in the covisibility graph
-        // We will impose loop candidates to have a higher similarity than this
         // Step 3：遍历当前回环关键帧所有连接（ > 15个共视地图点）关键帧，计算当前关键帧与每个共视关键帧的词袋相似度得分，并得到最低得分 minScore
         const vector<KeyFrame *> vpConnectedKeyFrames = mpCurrentKF->GetVectorCovisibleKeyFrames();
         const DBoW2::BowVector &CurrentBowVec = mpCurrentKF->mBowVec;
         float minScore = 1;
+
         for (size_t i = 0; i < vpConnectedKeyFrames.size(); i++)
         {
             KeyFrame *pKF = vpConnectedKeyFrames[i];
+
             if (pKF->isBad())
                 continue;
+
             const DBoW2::BowVector &BowVec = pKF->mBowVec;
-            // 计算两个关键帧的相似度得分；得分越低,相似度越低
+
+            // 计算两个关键帧的相似度得分；得分越低，相似度越低
             float score = mpORBVocabulary->score(CurrentBowVec, BowVec);
+
             // 更新最低得分
             if (score < minScore)
                 minScore = score;
         }
 
-        // Query the database imposing the minimum score
         // Step 4：在所有关键帧中找出闭环候选帧（注意：不和当前帧连接）
-        // minScore 的作用：认为和当前关键帧具有回环关系的关键帧,不应该低于当前关键帧的相邻关键帧的最低的相似度 minScore
-        // 得到的这些关键帧,和当前关键帧具有较多的公共单词,并且相似度评分都挺高
+        // minScore 的作用：认为和当前关键帧具有回环关系的关键帧，不应该低于当前关键帧的相邻关键帧的最低的相似度 minScore
+        // 得到的这些关键帧，和当前关键帧具有较多的公共单词，并且相似度评分都挺高
         vector<KeyFrame *> vpCandidateKFs = mpKeyFrameDB->DetectLoopCandidates(mpCurrentKF, minScore);
 
-        // If there are no loop candidates, just add new keyframe and return false
-        // 如果没有闭环候选帧，返回 false
+        // 如果没有闭环候选帧，只需把关键帧添加到关键帧数据库，并返回 false
         if (vpCandidateKFs.empty())
         {
             mpKeyFrameDB->add(mpCurrentKF);
@@ -193,28 +188,24 @@ namespace ORB_SLAM2
             return false;
         }
 
-        // For each loop candidate check consistency with previous loop candidates
-        // Each candidate expands a covisibility group (keyframes connected to the loop candidate in the covisibility graph)
-        // A group is consistent with a previous group if they share at least a keyframe
-        // We must detect a consistent loop in several consecutive keyframes to accept it
         // Step 5：在候选帧中检测具有连续性的候选帧
-        // 1、每个候选帧将与自己相连的关键帧构成一个“子候选组spCandidateGroup”， vpCandidateKFs-->spCandidateGroup
+        // 1、每个候选帧将与自己相连的关键帧构成一个【子候选组 spCandidateGroup】， vpCandidateKFs --> spCandidateGroup
         // 2、检测“子候选组”中每一个关键帧是否存在于“连续组”，如果存在 nCurrentConsistency++，则将该“子候选组”放入“当前连续组vCurrentConsistentGroups”
-        // 3、如果nCurrentConsistency大于等于3，那么该”子候选组“代表的候选帧过关，进入mvpEnoughConsistentCandidates
+        // 3、如果 nCurrentConsistency 大于等于3，那么该”子候选组“代表的候选帧过关，进入 mvpEnoughConsistentCandidates
 
-        // 相关的概念说明:（为方便理解，见视频里的图示）
-        // 组(group): 对于某个关键帧, 其和其具有共视关系的关键帧组成了一个"组";
-        // 子候选组(CandidateGroup): 对于某个候选的回环关键帧, 其和其具有共视关系的关键帧组成的一个"组";
-        // 连续(Consistent):  不同的组之间如果共同拥有一个及以上的关键帧,那么称这两个组之间具有连续关系
-        // 连续性(Consistency):称之为连续长度可能更合适,表示累计的连续的链的长度:A--B 为1, A--B--C--D 为3等;具体反映在数据类型 ConsistentGroup.second上
-        // 连续组(Consistent group): mvConsistentGroups存储了上次执行回环检测时, 新的被检测出来的具有连续性的多个组的集合.由于组之间的连续关系是个网状结构,因此可能存在
-        //                          一个组因为和不同的连续组链都具有连续关系,而被添加两次的情况(当然连续性度量是不相同的)
-        // 连续组链:自造的称呼,类似于菊花链A--B--C--D这样形成了一条连续组链.对于这个例子中,由于可能E,F都和D有连续关系,因此连续组链会产生分叉;为了简化计算,连续组中将只会保存
-        //         最后形成连续关系的连续组们(见下面的连续组的更新)
-        // 子连续组: 上面的连续组中的一个组
-        // 连续组的初始值: 在遍历某个候选帧的过程中,如果该子候选组没有能够和任何一个上次的子连续组产生连续关系,那么就将添加自己组为连续组,并且连续性为0(相当于新开了一个连续链)
-        // 连续组的更新: 当前次回环检测过程中,所有被检测到和之前的连续组链有连续的关系的组,都将在对应的连续组链后面+1,这些子候选组(可能有重复,见上)都将会成为新的连续组;
-        //              换而言之连续组mvConsistentGroups中只保存连续组链中末尾的组
+        // 相关的概念说明：（为方便理解，见视频里的图示）
+        // 【组(group)】：对于某个关键帧，其和其具有共视关系的关键帧组成了一个"组"；
+        // 【子候选组(CandidateGroup)】：对于某个候选的回环关键帧，其和其具有共视关系的关键帧组成的一个"组"；
+        // 【连续性(Consistency)】：不同的组之间如果共同拥有【一个及以上】的关键帧，那么称这两个组之间具有连续关系；
+        // 【连续长度】：表示累计的连续的链的长度：A--B 为 1, A--B--C--D 为 3 等；具体反映在数据类型 ConsistentGroup.second 上；
+        // 【连续组(Consistent group)】：mvConsistentGroups 存储了上次执行回环检测时, 新的被检测出来的具有连续性的多个组的集合。由于组之间的连续关系是个网状结构，因此可能存在
+        //                              一个组因为和不同的连续组链都具有连续关系，而被添加两次的情况(当然连续性度量是不相同的)；
+        // 【连续组链】：自造的称呼，类似于菊花链 A--B--C--D 这样形成了一条连续组链。对于这个例子中，由于可能 E，F 都和 D 有连续关系，因此连续组链会产生分叉；为了简化计算，连续组中将只会保存
+        //              最后形成连续关系的连续组们(见下面的连续组的更新)；
+        // 【子连续组】: 上面的连续组中的一个组；
+        // 【连续组的初始值】: 在遍历某个候选帧的过程中，如果该子候选组没有能够和任何一个上次的子连续组产生连续关系,那么就将添加自己组为连续组,并且连续性为0(相当于新开了一个连续链)；
+        // 【连续组的更新】: 当前次回环检测过程中，所有被检测到和之前的连续组链有连续的关系的组，都将在对应的连续组链后面+1，这些子候选组(可能有重复,见上)都将会成为新的连续组，
+        //                  换而言之，连续组 mvConsistentGroups 中只保存连续组链中末尾的组；
 
         // 记录最终筛选后得到的闭环帧，先清空
         mvpEnoughConsistentCandidates.clear();
@@ -234,7 +225,7 @@ namespace ORB_SLAM2
         {
             KeyFrame *pCandidateKF = vpCandidateKFs[i];
 
-            // Step 5.2：将候选关键帧及其相连的关键帧构成一个“子候选组”
+            // Step 5.2：将候选关键帧及其相连的关键帧构成一个【子候选组】
             set<KeyFrame *> spCandidateGroup = pCandidateKF->GetConnectedKeyFrames();
             // 把候选关键帧也加进去
             spCandidateGroup.insert(pCandidateKF);
@@ -331,12 +322,13 @@ namespace ORB_SLAM2
             return true;
         }
 
-        // 多余的代码,执行不到
+        // 多余的代码，执行不到
         mpCurrentKF->SetErase();
 
         return false;
     }
 
+    // TODO 作用：闭环线程的第 2 阶段 ——> 计算 Sim(3)
     /**
      * @brief 计算当前关键帧和上一步闭环候选帧的Sim3变换
      * 1. 遍历闭环候选帧集，筛选出与当前帧的匹配特征点数大于20的候选帧集合，并为每一个候选帧构造一个Sim3Solver
@@ -348,7 +340,6 @@ namespace ORB_SLAM2
      * @return true         只要有一个候选关键帧通过Sim3的求解与优化，就返回true
      * @return false        所有候选关键帧与当前关键帧都没有有效Sim3变换
      */
-    // todo 作用：计算 Sim(3) 流程👇
     bool LoopClosing::ComputeSim3()
     {
         // Sim3 计算流程说明：
@@ -598,6 +589,7 @@ namespace ORB_SLAM2
         }
     }
 
+    // TODO 作用：闭环线程的第 2 阶段 ——> 闭环矫正
     /**
      * @brief 闭环矫正
      * 1. 通过求解的 Sim3 以及相对姿态关系，调整与当前帧相连的关键帧位姿以及这些关键帧观测到的地图点位置（相连关键帧---当前帧）
@@ -606,7 +598,6 @@ namespace ORB_SLAM2
      * 4. 对 Essential Graph（Pose Graph）进行优化，MapPoints 的位置则根据优化后的位姿做相对应的调整
      * 5. 创建线程进行全局 Bundle Adjustment
      */
-    // TODO 作用：闭环线程的第 2 阶段 ——> 闭环矫正
     void LoopClosing::CorrectLoop()
     {
 
@@ -926,7 +917,7 @@ namespace ORB_SLAM2
         }
     }
 
-    // 由外部线程调用,请求复位当前线程
+    // 由外部线程调用，请求复位当前线程
     void LoopClosing::RequestReset()
     {
         // 标志置位
@@ -948,7 +939,7 @@ namespace ORB_SLAM2
         }
     }
 
-    // 当前线程调用,检查是否有外部线程请求复位当前线程,如果有的话就复位回环检测线程
+    // 当前线程调用，检查是否有外部线程请求复位当前线程，如果有的话就复位回环检测线程
     void LoopClosing::ResetIfRequested()
     {
         unique_lock<mutex> lock(mMutexReset);
@@ -966,7 +957,7 @@ namespace ORB_SLAM2
      *
      * @param[in] nLoopKF 看上去是闭环关键帧 id, 但是在调用的时候给的其实是【当前关键帧】的 id
      */
-    // TODO 作用：完成闭环矫正后的最后一步 —— 对所有地图点和关键帧位姿进行全局 BA 优化👇
+    // todo 作用：完成闭环矫正后的最后一步 —— 对所有地图点和关键帧位姿进行全局 BA 优化👇
     void LoopClosing::RunGlobalBundleAdjustment(unsigned long nLoopKF)
     {
         cout << "Starting Global Bundle Adjustment" << endl;
@@ -1109,28 +1100,30 @@ namespace ORB_SLAM2
         }
     }
 
-    // 由外部线程调用,请求终止当前线程
+    // 由外部线程调用，请求终止当前线程
     void LoopClosing::RequestFinish()
     {
         unique_lock<mutex> lock(mMutexFinish);
         mbFinishRequested = true;
     }
 
-    // 当前线程调用,查看是否有外部线程请求当前线程
+    // 当前线程调用，查看是否有外部线程请求当前线程
     bool LoopClosing::CheckFinish()
     {
         unique_lock<mutex> lock(mMutexFinish);
+
         return mbFinishRequested;
     }
 
-    // 有当前线程调用,执行完成该函数之后线程主函数退出,线程销毁
+    // 有当前线程调用，执行完成该函数之后线程主函数退出，线程销毁
     void LoopClosing::SetFinish()
     {
         unique_lock<mutex> lock(mMutexFinish);
+
         mbFinished = true;
     }
 
-    // 由外部线程调用,判断当前回环检测线程是否已经正确终止了
+    // 由外部线程调用，判断当前回环检测线程是否已经正确终止了
     bool LoopClosing::isFinished()
     {
         unique_lock<mutex> lock(mMutexFinish);

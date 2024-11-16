@@ -226,6 +226,7 @@ namespace ORB_SLAM2
         set<KeyFrame *> s;
         for (map<KeyFrame *, int>::iterator mit = mConnectedKeyFrameWeights.begin(); mit != mConnectedKeyFrameWeights.end(); mit++)
             s.insert(mit->first);
+        
         return s;
     }
 
@@ -236,13 +237,13 @@ namespace ORB_SLAM2
         return mvpOrderedConnectedKeyFrames;
     }
 
+    // TODO 获取当前关键帧【前 N 个】最高共视程度的关键帧
     /**
      * @brief 得到与该关键帧连接的前N个最强共视关键帧(已按权值排序)
      *
      * @param[in] N                 设定要取出的关键帧数目
      * @return vector<KeyFrame*>    满足权重条件的关键帧集合
      */
-    // todo 作用：获取当前关键帧前N个最强共视关键帧
     vector<KeyFrame *> KeyFrame::GetBestCovisibilityKeyFrames(const int &N)
     {
         unique_lock<mutex> lock(mMutexConnections);
