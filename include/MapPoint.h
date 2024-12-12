@@ -291,8 +291,7 @@ namespace ORB_SLAM2
         std::map<KeyFrame *, size_t> mObservations;
 
         // Mean viewing direction
-        // 该MapPoint平均观测方向
-        // 用于判断点是否在可视范围内
+        // 该MapPoint平均观测方向，用于判断点是否在可视范围内
         cv::Mat mNormalVector;
 
         // Best descriptor to fast matching

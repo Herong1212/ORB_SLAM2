@@ -1135,7 +1135,7 @@ namespace ORB_SLAM2
         /** </ul> */
     }
 
-    // 当某个特征点的深度信息或者双目信息有效时,将它反投影到三维世界坐标系中
+    // 当某个特征点的深度信息或者双目信息有效时，将它反投影到三维世界坐标系中
     cv::Mat Frame::UnprojectStereo(const int &i)
     {
         // KeyFrame::UnprojectStereo

@@ -100,7 +100,7 @@ namespace ORB_SLAM2
            虽然我们拿不到每个图层之间确定的尺度信息,但是我们有缩放比例这个相对的信息哇
         */
         mfMaxDistance = dist * levelScaleFactor;                             // 当前图层的"深度"
-        mfMinDistance = mfMaxDistance / pFrame->mvScaleFactors[nLevels - 1]; // 该特征点上一个图层的"深度""
+        mfMinDistance = mfMaxDistance / pFrame->mvScaleFactors[nLevels - 1]; // 该特征点上一个图层的"深度"
 
         // 见 mDescriptor 在MapPoint.h中的注释 ==> 其实就是获取这个地图点的描述子
         pFrame->mDescriptors.row(idxF).copyTo(mDescriptor);
@@ -119,6 +119,7 @@ namespace ORB_SLAM2
         unique_lock<mutex> lock(mMutexPos);
         Pos.copyTo(mWorldPos);
     }
+    
     // 获取地图点在世界坐标系下的坐标
     cv::Mat MapPoint::GetWorldPos()
     {

@@ -127,6 +127,7 @@ namespace ORB_SLAM2
                 // ! 注意这里的关键帧被设置成为了 bad 的情况, 这个需要注意
                 mpLoopCloser->InsertKeyFrame(mpCurrentKeyFrame);
             }
+            
             else if (Stop()) // 当要终止当前线程的时候
             {
                 // Safe area to stop

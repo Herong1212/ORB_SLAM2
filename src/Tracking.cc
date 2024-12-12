@@ -237,10 +237,7 @@ namespace ORB_SLAM2
     // 2、进行tracking过程
     // 输出世界坐标系到该帧相机坐标系的变换矩阵
 
-    cv::Mat Tracking::GrabImageStereo(
-        const cv::Mat &imRectLeft,  // 左侧图像
-        const cv::Mat &imRectRight, // 右侧图像
-        const double &timestamp)    // 时间戳
+    cv::Mat Tracking::GrabImageStereo(const cv::Mat &imRectLeft, const cv::Mat &imRectRight, const double &timestamp)
     {
         mImGray = imRectLeft;
         cv::Mat imGrayRight = imRectRight;
@@ -274,7 +271,7 @@ namespace ORB_SLAM2
             }
         }
 
-        // Step 2 ：构造Frame
+        // Step 2 ：构造 Frame
         mCurrentFrame = Frame(
             mImGray,             // 左目图像
             imGrayRight,         // 右目图像
@@ -285,7 +282,7 @@ namespace ORB_SLAM2
             mK,                  // 内参矩阵
             mDistCoef,           // 去畸变参数
             mbf,                 // 基线长度
-            mThDepth);           // 远点,近点的区分阈值
+            mThDepth);           // 远点，近点的区分阈值
 
         // Step 3 ：跟踪
         Track();
@@ -324,12 +321,12 @@ namespace ORB_SLAM2
 
         // step 2 ：将深度相机的disparity转为Depth , 也就是转换成为真正尺度下的深度
         if ((fabs(mDepthMapFactor - 1.0f) > 1e-5) || imDepth.type() != CV_32F)
-            imDepth.convertTo(    // 将图像转换成为另外一种数据类型,具有可选的数据大小缩放系数
+            imDepth.convertTo(    // 将图像转换成为另外一种数据类型，具有可选的数据大小缩放系数
                 imDepth,          // 输出图像
                 CV_32F,           // 输出图像的数据类型
                 mDepthMapFactor); // 缩放系数
 
-        // 步骤3：构造Frame
+        // step 3：构造Frame
         mCurrentFrame = Frame(
             mImGray,            // 灰度图像
             imDepth,            // 深度图像
@@ -341,7 +338,7 @@ namespace ORB_SLAM2
             mbf,                // 相机基线*相机焦距
             mThDepth);          // 内外点区分深度阈值
 
-        // 步骤4：跟踪
+        // step 4：跟踪
         Track();
 
         // 返回当前帧的位姿
@@ -426,7 +423,7 @@ namespace ORB_SLAM2
         // NOTE track 包含两部分：估计运动、跟踪局部地图
 
         // mState为tracking 的状态，包括 SYSTME_NOT_READY, NO_IMAGE_YET, NOT_INITIALIZED, OK, LOST
-        // 如果图像复位过、或者第一次运行，则为NO_IMAGE_YET状态
+        // 如果图像复位过、或者第一次运行，则为 NO_IMAGE_YET 状态
         if (mState == NO_IMAGES_YET)
         {
             mState = NOT_INITIALIZED;
@@ -458,10 +455,11 @@ namespace ORB_SLAM2
             if (mState != OK)
                 return;
         }
+
         else
         {
             // System is initialized. Track Frame.
-            // bOK为临时变量，用于表示每个函数是否执行成功
+            // bOK 为临时变量，用于表示每个函数是否执行成功
             bool bOK;
 
             // Initial camera pose estimation using motion model or relocalization (if tracking is lost)
@@ -511,6 +509,7 @@ namespace ORB_SLAM2
                     bOK = Relocalization();
                 }
             }
+
             else
             {
                 // Localization Mode: Local Mapping is deactivated
@@ -618,11 +617,15 @@ namespace ORB_SLAM2
             // If we have an initial estimation of the camera pose and matching. Track the local map.
             // Step 3：在跟踪得到当前帧初始姿态后，现在对local map进行跟踪得到更多的匹配，并优化当前位姿
             // 前面只是跟踪一帧得到初始位姿，这里搜索局部关键帧、局部地图点，和当前帧进行投影匹配，得到更多匹配的MapPoints后进行Pose优化
+
+            // case1：正常 SLAM 模式
             if (!mbOnlyTracking)
             {
                 if (bOK)
                     bOK = TrackLocalMap();
             }
+
+            // case2：纯定位模式，一般用不到~
             else
             {
                 // mbVO true means that there are few matches to MapPoints in the map. We cannot retrieve
@@ -758,18 +761,15 @@ namespace ORB_SLAM2
 
     } // Tracking
 
-    /*
-     * @brief 双目和rgbd的地图初始化，比单目简单很多
-     *
-     * 由于具有深度信息，直接生成MapPoints
-     */
+    // note1：双目和 rgbd 的地图初始化，比单目简单很多 -- 由于具有深度信息，直接生成 MapPoints
+    // 核心流程：利用当前帧的特征点和深度信息生成 3D 点（MapPoints），并将这些 MapPoints 插入到地图中。
     void Tracking::StereoInitialization()
     {
-        // 初始化要求当前帧的特征点超过500
+        // 初始化要求当前帧的特征点超过 500
         if (mCurrentFrame.N > 500)
         {
             // Set Frame pose to the origin
-            // 设定初始位姿为单位旋转，0平移
+            // 设定初始位姿为单位旋转，0 平移
             mCurrentFrame.SetPose(cv::Mat::eye(4, 4, CV_32F));
 
             // Create KeyFrame
@@ -851,6 +851,7 @@ namespace ORB_SLAM2
         }
     }
 
+    // note2：单目的地图初始化 -- 很复杂！
     /*
      * @brief 单目的地图初始化
      *
@@ -874,7 +875,7 @@ namespace ORB_SLAM2
             // 单目初始帧的特征点数必须大于100
             if (mCurrentFrame.mvKeys.size() > 100)
             {
-                // 初始化需要两帧，分别是mInitialFrame，mCurrentFrame
+                // 初始化需要两帧，分别是 mInitialFrame，mCurrentFrame
                 mInitialFrame = Frame(mCurrentFrame);
                 // 用当前帧更新上一帧
                 mLastFrame = Frame(mCurrentFrame);
@@ -897,7 +898,9 @@ namespace ORB_SLAM2
                 return;
             }
         }
-        else // 如果单目初始化器已经被创建
+
+        // 如果单目初始化器已经被创建
+        else
         {
             // Try to initialize
             // Step 2 如果当前帧特征点数太少（不超过100），则重新构造初始器
@@ -912,9 +915,8 @@ namespace ORB_SLAM2
 
             // Find correspondences
             // Step 3 在mInitialFrame与mCurrentFrame中找匹配的特征点对
-            ORBmatcher matcher(
-                0.9,   // 最佳的和次佳特征点评分的比值阈值，这里是比较宽松的，跟踪时一般是0.7
-                true); // 检查特征点的方向
+            ORBmatcher matcher(0.9,   // 最佳的和次佳特征点评分的比值阈值，这里是比较宽松的，跟踪时一般是0.7
+                               true); // 检查特征点的方向
 
             // 对 mInitialFrame,mCurrentFrame 进行特征点匹配
             // mvbPrevMatched为参考帧的特征点坐标，初始化存储的是mInitialFrame中特征点坐标，匹配后存储的是匹配好的当前帧的特征点坐标
@@ -970,14 +972,11 @@ namespace ORB_SLAM2
                 // mvIniP3D是cv::Point3f类型的一个容器，是个存放3D点的临时变量，
                 // CreateInitialMapMonocular将3D点包装成MapPoint类型存入KeyFrame和Map中
                 CreateInitialMapMonocular();
-            } // 当初始化成功的时候进行
-        } // 如果单目初始化器已经被创建
+            }
+        }
     }
 
-    /**
-     * @brief 单目相机成功初始化后用三角化得到的点生成MapPoints
-     *
-     */
+    // 单目相机成功初始化后用三角化得到的点生成MapPoints
     void Tracking::CreateInitialMapMonocular()
     {
         // Create KeyFrames 认为单目初始化时候的参考帧和当前帧都是关键帧
@@ -1047,7 +1046,6 @@ namespace ORB_SLAM2
         pKFini->UpdateConnections();
         pKFcur->UpdateConnections();
 
-        // Bundle Adjustment
         cout << "New Map created with " << mpMap->MapPointsInMap() << " points" << endl;
 
         // Step 4 全局BA优化，同时优化所有位姿和三维点

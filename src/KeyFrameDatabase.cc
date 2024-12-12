@@ -128,8 +128,7 @@ namespace ORB_SLAM2
             // words 是检测图像是否匹配的枢纽，遍历该 pKF 的每一个 word
             // mBowVec 内部实际存储的是 std::map<WordId, WordValue>
             // WordId 和 WordValue 表示 Word 在叶子中的 id 和权重
-            // todo 遍历词袋向量中的每个词
-            for (DBoW2::BowVector::const_iterator vit = pKF->mBowVec.begin(), vend = pKF->mBowVec.end(); vit != vend; vit++)
+            for (DBoW2::BowVector::const_iterator vit = pKF->mBowVec.begin(), vend = pKF->mBowVec.end(); vit != vend; vit++) // 遍历词袋向量中的每个词
             {
                 // 根据倒排索引，提取所有包含该 word 的 KeyFrame
                 list<KeyFrame *> &lKFs = mvInvertedFile[vit->first];
@@ -161,7 +160,7 @@ namespace ORB_SLAM2
         if (lKFsSharingWords.empty())
             return vector<KeyFrame *>();
 
-        // Step 2：统计上述所有闭环候选帧中与当前帧具有共同单词最多的单词数，用来决定相对阈值
+        // Step 2：统计上述所有闭环候选帧中与当前帧具有共同单词最多的单词数，用来决定【阈值1】
         int maxCommonWords = 0;
         for (list<KeyFrame *>::iterator lit = lKFsSharingWords.begin(), lend = lKFsSharingWords.end(); lit != lend; lit++)
         {
@@ -187,6 +186,7 @@ namespace ORB_SLAM2
                 float si = mpVoc->score(pKF->mBowVec, pKFi->mBowVec);
 
                 pKFi->mLoopScore = si;
+                
                 // ! 注意这里区别于 DetectLoopCandidates()，还有个审核条件！
                 if (si >= minScore) // 重定位的时候直接加进去的！
                     lScoreAndMatch.push_back(make_pair(si, pKFi));
@@ -249,8 +249,10 @@ namespace ORB_SLAM2
 
         // 用于检查是否有重复的关键帧，防止重复添加相同的关键帧到候选结果中
         set<KeyFrame *> spAlreadyAddedKF;
-        // 存储的是所有符合条件的重定位候选关键帧指针
+        
+        // 存储的是所有符合条件的【闭环】候选关键帧指针
         vector<KeyFrame *> vpLoopCandidates;
+
         // lAccScoreAndMatch 的大小是所有候选关键帧组的总数，理论上 vpRelocCandidates 的最终大小不会超过这个值
         vpLoopCandidates.reserve(lAccScoreAndMatch.size());
 
@@ -333,6 +335,7 @@ namespace ORB_SLAM2
 
         // Step 3：遍历上述关键帧，挑选出共有单词数大于【阈值1】的及【其和当前帧单词匹配的得分】存入 lScoreAndMatch
         int minCommonWords = maxCommonWords * 0.8f; // notice：【阈值1】---最小公共单词数为最大公共单词数目的 0.8 倍
+
         //! lScoreAndMatch 的数据结构： first -- 相似度得分；second -- 对应的候选关键帧，如：lScoreAndMatch = [{0.8, KF_1}, {0.9, KF_3},,,];
         list<pair<float, KeyFrame *>> lScoreAndMatch;
         int nscores = 0;

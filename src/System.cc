@@ -163,7 +163,7 @@ namespace ORB_SLAM2
         mpLoopCloser->SetLocalMapper(mpLocalMapper);
     }
 
-    // todo1 双目输入时的追踪器接口------追踪双目数据，返回mpTracker->GrabImageStereo(imLeft,imRight,timestamp)
+    // todo1 双目输入时的追踪器接口------追踪双目数据，返回 mpTracker->GrabImageStereo(imLeft,imRight,timestamp)
     cv::Mat System::TrackStereo(const cv::Mat &imLeft,   // 左侧图像
                                 const cv::Mat &imRight,  // 右侧图像
                                 const double &timestamp) // 时间戳
@@ -197,7 +197,8 @@ namespace ORB_SLAM2
                 mpTracker->InformOnlyTracking(true); // 定位时，只跟踪
                 // 同时清除定位标记
                 mbActivateLocalizationMode = false; // 防止重复执行
-            } // 如果激活定位模式
+            }
+
             if (mbDeactivateLocalizationMode)
             {
                 // 如果取消定位模式
@@ -214,6 +215,7 @@ namespace ORB_SLAM2
         {
             // 上锁
             unique_lock<mutex> lock(mMutexReset);
+
             // 是否有复位请求？
             if (mbReset)
             {
@@ -221,8 +223,8 @@ namespace ORB_SLAM2
                 mpTracker->Reset();
                 // 清除标志
                 mbReset = false;
-            } // 是否有复位请求
-        } // 检查是否有复位的操作
+            }
+        }
 
         // 用矩阵Tcw来保存估计的相机 位姿，运动追踪器的GrabImageStereo函数才是真正进行运动估计的函数
         cv::Mat Tcw = mpTracker->GrabImageStereo(imLeft, imRight, timestamp);
